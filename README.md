@@ -4,6 +4,7 @@
 1. Download MySql
     - Set the root password as root@pw
     - Create a databse 'confession' in mysql
+2. I am using Java 11 for this project so maybe have to download Java 11 also.
 
 ## To run
 1. Maven reload project
