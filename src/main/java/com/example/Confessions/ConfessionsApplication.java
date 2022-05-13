@@ -10,4 +10,6 @@ public class ConfessionsApplication {
 		SpringApplication.run(ConfessionsApplication.class, args);
 	}
 
+
+
 }
