@@ -33,15 +33,25 @@ public class PostController {
     // create new posts api
     @PostMapping("/posts")
     public ResponseEntity<?> createPost(@RequestBody Post post) {
+        // spam checking
         int occurance = 0;
+        boolean replyIdExists = false;
         List<Post> allPosts = postRepository.findAll();
         for (Post curPost: allPosts) {
             if (curPost.getContent().equalsIgnoreCase(post.getContent()))
                 occurance++;
+            if (post.getReplyId() == curPost.getApprove()) {
+                replyIdExists = true;
+            }
         }
         if (occurance >= 3) {
             MaliciousPostingError errorResponse = new MaliciousPostingError();
             errorResponse.setMessage("Spamming Detected!");
+            return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+        }
+        if(!replyIdExists) {
+            MaliciousPostingError errorResponse = new MaliciousPostingError();
+            errorResponse.setMessage("Reply Id not exist!");
             return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
         }
         Post returnPost = postRepository.save(post);
@@ -94,6 +104,7 @@ public class PostController {
         Stack<Post> postStack = new Stack<>();
         postStack.add(post);
 
+        // batch delete method
         while (postStack.size() > 0) {
             boolean flag = false;
             Post cur = postStack.peek();
