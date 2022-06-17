@@ -44,12 +44,15 @@ public class PostController {
     @PostMapping("/posts")
     public ResponseEntity<?> submitPost(@RequestBody Post post) {
 
+        // Spam checking
+        // Submit empty post
         if (post.getContent().isEmpty()) {
             MaliciousPostingError errorResponse = new MaliciousPostingError();
             errorResponse.setMessage("Spamming Detected!");
             return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
         }
-        // Spam checking
+
+        // Multiple occurrences
         int occurance = 0;
         boolean replyIdExists = false;
         List<Post> allPosts = postRepository.findAll();
@@ -65,12 +68,15 @@ public class PostController {
             errorResponse.setMessage("Spamming Detected!");
             return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
         }
+
+        // Reply id soes not exist
         if(!replyIdExists && post.getReplyId() != -1) {
             MaliciousPostingError errorResponse = new MaliciousPostingError();
             errorResponse.setMessage("Reply Id not exist!");
             return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
         }
 
+        // Add to pending queue
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("content", post.getContent());
         jsonObject.put("replyId", post.getReplyId());
@@ -127,11 +133,14 @@ public class PostController {
         return ResponseEntity.status(HttpStatus.NOT_FOUND);
     }
 
-    // get all posts at /posts api
+    // get pending posts
     @GetMapping("/posts/pending")
     public List<Post> getPendingPosts() throws java.text.ParseException {
+
+        // Return pending posts list
         List<Post> pendingList = new ArrayList<>();
 
+        // Parse pending posts (JSON objects) in queue and convert them to post objects
         for (JSONObject jsonObject: ConfessionsApplication.postQueue) {
             String dateInString = (String) jsonObject.get("datePosted");
             SimpleDateFormat formatter = new SimpleDateFormat("EEE MMM dd hh:mm:ss z yyyy");
@@ -147,6 +156,8 @@ public class PostController {
     // delete post api
     @DeleteMapping("/posts/{id}")
     public ResponseEntity<Map<String, Boolean>> deletePost(@PathVariable Long id) {
+
+        // Find post with the id, if exists, delete it else return error
         Post post = postRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Post Not Found for ID: " + id));
         postRepository.delete(post);
@@ -158,39 +169,62 @@ public class PostController {
     // delete posts by batch
     @DeleteMapping("/posts/{id}/_batch")
     public ResponseEntity<Map<String, Boolean>> deletePostBatch(@PathVariable Long id) {
-        //List<Long> postIdsList = Arrays.asList(postIds.split(" ")).stream().map(Long::parseLong).collect(Collectors.toList());
+
+        // Find the starting post
         Post post = postRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Post Not Found for ID: " + id));
 
+        // Find all posts from database
         List<Post> allPosts = postRepository.findAll();
+
+        // Store ids of posts to be deleted, use set to avoid duplicates
         Set<Post> deletePosts = new HashSet<>();
+
+        // Helper for DFS
         Stack<Post> postStack = new Stack<>();
+
+        // Add the starting post to the stack
         postStack.add(post);
 
-        // batch delete method
+        // Batch delete operation
         while (postStack.size() > 0) {
             boolean flag = false;
             Post cur = postStack.peek();
+
             for (Post temp: allPosts) {
+                // Search for a post that is replying to the current post and not added to the set
                 if (temp.getReplyId() == cur.getId() && !deletePosts.contains(temp)) {
+                    // Add the post into the stack
                     postStack.push(temp);
                     flag = true;
+                    // Break to start DFS for next post (the post that is replying to the current post)
                     break;
                 }
             }
+
+            // No post is replying to the current post
             if (!flag) {
+                // Add current post to the set
                 Post addToSet = postStack.pop();
                 deletePosts.add(addToSet);
                 for (Post temp: allPosts) {
+                    // Check if the current post is replying to another post
                     if (cur.getReplyId() == temp.getId() && !postStack.contains(temp)) {
                         postStack.push(temp);
+                        // One post can only reply to another post
+                        break;
                     }
                 }
             }
         }
 
+        // Get the ids of the posts in delete stack
         List<Long> deleteIds = deletePosts.stream().map(tempPost -> tempPost.getId()).collect(Collectors.toList());
+
+        // Delete those posts by id
         postRepository.deleteAllById(deleteIds);
+
+        // Return a response
         Map<String, Boolean> response = new HashMap<>();
         response.put("deleted", Boolean.TRUE);
         return ResponseEntity.ok(response);
@@ -202,14 +236,15 @@ public class PostController {
         List<Post> availablePosts = postRepository.findAll();
         List<Post> relatedPosts = new ArrayList<>();
 
-
         // Search
         for (Post post: availablePosts) {
+            // Check if the content or date of a post contains the keyword
             if (post.getContent().contains(keywords)
                     || post.getDatePosted().toString().split(" ")[0].equalsIgnoreCase(keywords)) {
                 relatedPosts.add(post);
             } else {
                 try {
+                    // See if the keyword is actually an id
                     Long potentialId = Long.parseLong(keywords);
                     if (potentialId == post.getId()) {
                         relatedPosts.add(post);
@@ -223,12 +258,15 @@ public class PostController {
         return ResponseEntity.ok(relatedPosts);
     }
 
+    // Get latest submit id for a new post
     @GetMapping("/posts/submitId")
     public long getSubmitId() {
         long latestSubmitId = 1;
 
         // Read the latest submit id
         JSONParser jsonParser = new JSONParser();
+
+        // This file contains the last post's submit id
         try(FileReader reader = new FileReader(ConfessionsApplication.submitIdPath)) {
             Object obj = jsonParser.parse(reader);
             JSONArray submitIdList = (JSONArray) obj;
@@ -236,12 +274,12 @@ public class PostController {
             // This will be the next post's submit id, so the current submit id is added by 1
             latestSubmitId =  (long) ( (JSONObject) submitIdList.get(0) ).get("submitId") + 1;
 
+            // Update the latest submit id in the json file
             JSONObject newLatestSubmitId = new JSONObject();
             newLatestSubmitId.put("submitId", latestSubmitId);
             JSONArray tempList = new JSONArray();
             tempList.add(newLatestSubmitId);
 
-            // Update the latest submit id in the json file
             try (FileWriter writer = new FileWriter(ConfessionsApplication.submitIdPath)) {
                 writer.write(tempList.toJSONString());
                 writer.flush();
@@ -264,9 +302,7 @@ public class PostController {
         Post returnPost = postRepository.save(post);
         return ResponseEntity.ok(returnPost);
     }
-
-
-
+    
     // get post by id {} means path variable
     @GetMapping("/posts/{id}")
     public ResponseEntity<Post> getPostById(@PathVariable Long id) {

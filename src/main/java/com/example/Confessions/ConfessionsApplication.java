@@ -115,14 +115,20 @@ public class ConfessionsApplication {
 			SimpleDateFormat formatter = new SimpleDateFormat("EEE MMM dd hh:mm:ss z yyyy");
 			Date datePosted = formatter.parse(dateInString);
 
+			// Since the queue is ordered by date, when we found a post
+			// that exist no longer than the required duration, we can straight away stop the operation
 			if (getDateDiff(currentDate, datePosted, TimeUnit.MINUTES) < duration) {
 				break;
 			}
+
+			// Pop qualified post from the queue and add to database
 			JSONObject postObj =  postQueue.poll();
 			long submitId = (long) postObj.get("submitId");
 			String content = (String) postObj.get("content");
 			long replyId = (long) postObj.get("replyId");
 			Post newPost = new Post(submitId, content, datePosted, replyId);
+
+			// Method to upload post to database
 			postController.autoPublishPost(newPost);
 		}
 	}
