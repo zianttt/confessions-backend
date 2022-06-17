@@ -23,18 +23,18 @@ public class Post {
     @JsonFormat(pattern="yyyy-MM-dd' 'HH:mm:ss")
     private Date datePosted;
 
-    @Column(name = "approve")
-    private int approve;
+    @Column(name = "submit_id")
+    private long submitId;
 
     public Post() {
 
     }
 
-    public Post(int approve, String content, Date datePosted, long replyId) {
+    public Post(long submitId, String content, Date datePosted, long replyId) {
         this.content = content;
         this.replyId = replyId;
         this.datePosted = datePosted;
-        this.approve = approve;
+        this.submitId = submitId;
     }
 
     public long getId() {
@@ -69,11 +69,11 @@ public class Post {
         this.datePosted = datePosted;
     }
 
-    public int getApprove() {
-        return approve;
+    public long getSubmitId() {
+        return submitId;
     }
 
-    public void setApprove(int approve) {
-        this.approve = approve;
+    public void setSubmitId(long submitId) {
+        this.submitId = submitId;
     }
 }
