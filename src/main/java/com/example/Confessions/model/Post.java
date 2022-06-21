@@ -1,7 +1,6 @@
 package com.example.Confessions.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import org.springframework.format.annotation.DateTimeFormat;
 
 import javax.persistence.*;
 import java.util.Date;
@@ -26,15 +25,19 @@ public class Post {
     @Column(name = "submit_id")
     private long submitId;
 
+    @Column(name = "has_file")
+    private long hasFile;
+
     public Post() {
 
     }
 
-    public Post(long submitId, String content, Date datePosted, long replyId) {
+    public Post(long submitId, String content, Date datePosted, long replyId, long hasFile) {
         this.content = content;
         this.replyId = replyId;
         this.datePosted = datePosted;
         this.submitId = submitId;
+        this.hasFile = hasFile;
     }
 
     public long getId() {
@@ -75,5 +78,13 @@ public class Post {
 
     public void setSubmitId(long submitId) {
         this.submitId = submitId;
+    }
+
+    public long getHasFile() {
+        return hasFile;
+    }
+
+    public void setHasFile(long hasFile) {
+        this.hasFile = hasFile;
     }
 }

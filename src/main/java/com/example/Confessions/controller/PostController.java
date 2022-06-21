@@ -5,6 +5,8 @@ import com.example.Confessions.exception.MaliciousPostingError;
 import com.example.Confessions.exception.ResourceNotFoundException;
 import com.example.Confessions.model.Post;
 import com.example.Confessions.repository.PostRepository;
+import com.example.Confessions.utils.SentimentAnalyzerService;
+import com.example.Confessions.utils.SpamCheck;
 import lombok.extern.slf4j.Slf4j;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -29,10 +31,15 @@ import java.util.stream.Collectors;
 @Slf4j
 public class PostController {
 
-
     // Inject repository here
     @Autowired
     private PostRepository postRepository;
+
+    // Spam checking utils
+    private SpamCheck spamCheck = new SpamCheck();
+
+    // Sentiment analysis
+    private SentimentAnalyzerService analyzer = new SentimentAnalyzerService();
 
     // get all posts at /posts api
     @GetMapping("/posts")
@@ -40,40 +47,38 @@ public class PostController {
         return postRepository.findAll();
     }
 
+
     // Users submit new posts
     @PostMapping("/posts")
     public ResponseEntity<?> submitPost(@RequestBody Post post) {
 
-        // Spam checking
-        // Submit empty post
-        if (post.getContent().isEmpty()) {
+        // Spam checking on post content
+        if (spamCheck.contentIsSpam(post.getContent())) {
             MaliciousPostingError errorResponse = new MaliciousPostingError();
             errorResponse.setMessage("Spamming Detected!");
             return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
         }
 
-        // Multiple occurrences
-        int occurance = 0;
-        boolean replyIdExists = false;
+        // Sentiment analyzer
+        if (analyzer.analyse(post.getContent()) <= 1) {
+            MaliciousPostingError errorResponse = new MaliciousPostingError();
+            errorResponse.setMessage("Negative post detected!");
+            return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+        }
+
+        // Comparative spam checking
         List<Post> allPosts = postRepository.findAll();
-        for (Post curPost: allPosts) {
-            if (curPost.getContent().equalsIgnoreCase(post.getContent()))
-                occurance++;
-            if (post.getReplyId() == curPost.getId()) {
-                replyIdExists = true;
-            }
-        }
-        if (occurance >= 3) {
-            MaliciousPostingError errorResponse = new MaliciousPostingError();
-            errorResponse.setMessage("Spamming Detected!");
-            return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
-        }
+        int results = spamCheck.comparativeSpamCheck(post, allPosts);
 
-        // Reply id soes not exist
-        if(!replyIdExists && post.getReplyId() != -1) {
-            MaliciousPostingError errorResponse = new MaliciousPostingError();
-            errorResponse.setMessage("Reply Id not exist!");
-            return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+        switch (results) {
+            case -1:
+                MaliciousPostingError errorResponse = new MaliciousPostingError();
+                errorResponse.setMessage("Spamming Detected!");
+                return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+            case 0:
+                MaliciousPostingError replyIdError = new MaliciousPostingError();
+                replyIdError.setMessage("Reply Id does not exist");
+                return new ResponseEntity<>(replyIdError, HttpStatus.NOT_FOUND);
         }
 
         // Add to pending queue
@@ -82,6 +87,7 @@ public class PostController {
         jsonObject.put("replyId", post.getReplyId());
         jsonObject.put("submitId", post.getSubmitId());
         jsonObject.put("datePosted", post.getDatePosted().toString());
+        jsonObject.put("hasFile", post.getHasFile());
         ConfessionsApplication.postQueue.offer(jsonObject);
         ConfessionsApplication.updateQueue();
 
@@ -103,7 +109,8 @@ public class PostController {
                 Date datePosted = formatter.parse(dateInString);
                 String content = (String) tempObj.get("content");
                 long replyId = (long) tempObj.get("replyId");
-                Post newPost = new Post(submitId, content, datePosted, replyId);
+                long hasFile = (long) tempObj.get("hasFile");
+                Post newPost = new Post(submitId, content, datePosted, replyId, hasFile);
                 postRepository.save(newPost);
 
                 tempList.remove(post);
@@ -148,7 +155,8 @@ public class PostController {
             long submitId = (long) jsonObject.get("submitId");
             String content = (String) jsonObject.get("content");
             long replyId = (long) jsonObject.get("replyId");
-            pendingList.add(new Post(submitId, content, datePosted, replyId));
+            long hasFile = (long) jsonObject.get("hasFile");
+            pendingList.add(new Post(submitId, content, datePosted, replyId, hasFile));
         }
         return pendingList;
     }
@@ -252,7 +260,6 @@ public class PostController {
                 } catch (NumberFormatException nfe) {
                     System.out.println("Not ID");
                 }
-
             }
         }
         return ResponseEntity.ok(relatedPosts);
@@ -310,7 +317,4 @@ public class PostController {
                 .orElseThrow(() -> new ResourceNotFoundException("Post Not Found for ID: " + id));
         return ResponseEntity.ok(post);
     }
-
-
-
 }

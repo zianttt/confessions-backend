@@ -49,7 +49,7 @@ public class ConfessionsApplication {
 	}
 
 	// Check every 5 minutes (300000 ms)
-	@Scheduled(fixedDelay = 10000)
+	@Scheduled(fixedDelay = 300000)
 	public void checkQueue() throws java.text.ParseException {
 
 		if (postQueue.isEmpty()) return;
@@ -126,7 +126,8 @@ public class ConfessionsApplication {
 			long submitId = (long) postObj.get("submitId");
 			String content = (String) postObj.get("content");
 			long replyId = (long) postObj.get("replyId");
-			Post newPost = new Post(submitId, content, datePosted, replyId);
+			long hasFile = (long) postObj.get("hasFile");
+			Post newPost = new Post(submitId, content, datePosted, replyId, hasFile);
 
 			// Method to upload post to database
 			postController.autoPublishPost(newPost);
