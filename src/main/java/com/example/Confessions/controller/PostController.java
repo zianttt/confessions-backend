@@ -36,7 +36,7 @@ public class PostController {
     private PostRepository postRepository;
 
     // Spam checking utils
-    private SpamCheck spamCheck = new SpamCheck();
+    private SpamCheck spamCheck = new SpamCheck(10, 0.2);
 
     // Sentiment analysis
     private SentimentAnalyzerService analyzer = new SentimentAnalyzerService();
@@ -73,7 +73,7 @@ public class PostController {
         switch (results) {
             case -1:
                 MaliciousPostingError errorResponse = new MaliciousPostingError();
-                errorResponse.setMessage("Spamming Detected!");
+                errorResponse.setMessage("HEllo");
                 return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
             case 0:
                 MaliciousPostingError replyIdError = new MaliciousPostingError();
@@ -86,6 +86,7 @@ public class PostController {
         jsonObject.put("content", post.getContent());
         jsonObject.put("replyId", post.getReplyId());
         jsonObject.put("submitId", post.getSubmitId());
+        System.out.println(post.getDatePosted().toString());
         jsonObject.put("datePosted", post.getDatePosted().toString());
         jsonObject.put("hasFile", post.getHasFile());
         ConfessionsApplication.postQueue.offer(jsonObject);
@@ -150,13 +151,15 @@ public class PostController {
         // Parse pending posts (JSON objects) in queue and convert them to post objects
         for (JSONObject jsonObject: ConfessionsApplication.postQueue) {
             String dateInString = (String) jsonObject.get("datePosted");
-            SimpleDateFormat formatter = new SimpleDateFormat("EEE MMM dd hh:mm:ss z yyyy");
+            // Fri Jun 24 23:53:22 MYT 2022
+            SimpleDateFormat formatter = new SimpleDateFormat("EEE MMM dd HH:mm:ss z yyyy");
             Date datePosted = formatter.parse(dateInString);
             long submitId = (long) jsonObject.get("submitId");
             String content = (String) jsonObject.get("content");
             long replyId = (long) jsonObject.get("replyId");
             long hasFile = (long) jsonObject.get("hasFile");
-            pendingList.add(new Post(submitId, content, datePosted, replyId, hasFile));
+            Post newPost = new Post(submitId, content, datePosted, replyId, hasFile);
+            pendingList.add(newPost);
         }
         return pendingList;
     }
@@ -243,12 +246,42 @@ public class PostController {
 
         List<Post> availablePosts = postRepository.findAll();
         List<Post> relatedPosts = new ArrayList<>();
+        String newDateString = "";
+        boolean possibleDate = keywords.length() == 10;
+        boolean possibleDateTime = keywords.length() == 19;
+        SimpleDateFormat dateTimeFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd");
 
         // Search
         for (Post post: availablePosts) {
+
+            // Date & date time search
+            if (possibleDate) {
+                try {
+                    Date searchDate = dateFormatter.parse(keywords);
+                    String curPostDateString = post.getDatePosted().toString().split(" ")[0];
+                    Date curPostDate = dateFormatter.parse(curPostDateString);
+                    if (searchDate.getTime() - curPostDate.getTime() == 0) {
+                        relatedPosts.add(post);
+                    }
+                } catch (java.text.ParseException e) {
+                    e.printStackTrace();
+                }
+            }else if (possibleDateTime) {
+                try {
+                    Date searchDate = dateTimeFormatter.parse(keywords);
+                    //System.out.println(searchDate);
+                    System.out.println(post.getContent() + " " + post.getDatePosted());
+                    if (searchDate.getTime() - post.getDatePosted().getTime() == 0) {
+                        relatedPosts.add(post);
+                    }
+                } catch (java.text.ParseException e) {
+                    e.printStackTrace();
+                }
+            }
+
             // Check if the content or date of a post contains the keyword
-            if (post.getContent().contains(keywords)
-                    || post.getDatePosted().toString().split(" ")[0].equalsIgnoreCase(keywords)) {
+            if (post.getContent().contains(keywords)) {
                 relatedPosts.add(post);
             } else {
                 try {
@@ -258,7 +291,7 @@ public class PostController {
                         relatedPosts.add(post);
                     }
                 } catch (NumberFormatException nfe) {
-                    System.out.println("Not ID");
+                    //System.out.println("Not ID");
                 }
             }
         }

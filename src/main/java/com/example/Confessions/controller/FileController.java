@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import com.example.Confessions.dto.DataHandler;
 import com.example.Confessions.model.File;
 import com.example.Confessions.service.FileService;
+import com.example.Confessions.utils.FileHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -32,18 +33,14 @@ public class FileController {
     @Autowired
     private FileService storageService;
 
+    private FileHandler fileHandler;
+
     @PostMapping("/files/{submitId}")
     public ResponseEntity<ResponseMessage> uploadFile(@RequestParam("file") MultipartFile file, @PathVariable Long submitId) {
 
         String message = "";
 
         try {
-
-            String filePath = request.getServletContext().getRealPath("/");
-            file.transferTo(new java.io.File(filePath));
-
-
-
             storageService.store(file, submitId);
             message = "Uploaded the file successfully: " + file.getOriginalFilename();
             return ResponseEntity.status(HttpStatus.OK).body(new ResponseMessage(message));
@@ -58,7 +55,7 @@ public class FileController {
         List<ResponseFile> files = storageService.getAllFiles().map(dbFile -> {
             String fileDownloadUri = ServletUriComponentsBuilder
                     .fromCurrentContextPath()
-                    .path("/files/")
+                    .path("/api/v1/files/")
                     .path(dbFile.getId())
                     .toUriString();
 
@@ -82,7 +79,7 @@ public class FileController {
     }
 
     @PostMapping("/files/ids")
-    public ResponseEntity<List<ResponseFile>> getFilesBySubmitIds(@RequestBody DataHandler submitIdsDetails) {
+    public ResponseEntity<List<File>> getFilesBySubmitIds(@RequestBody DataHandler submitIdsDetails) {
         List<Long> submitIdsNumbers = submitIdsDetails.getSubmitIds();
         List<File> files = storageService.getAllFiles().collect(Collectors.toList());
         List<File> selectedFiles = new ArrayList<>();
@@ -91,20 +88,6 @@ public class FileController {
                 selectedFiles.add(file);
         }
 
-        List<ResponseFile> retFiles = selectedFiles.stream().map(dbFile -> {
-            String fileDownloadUri = ServletUriComponentsBuilder
-                    .fromCurrentContextPath()
-                    .path("/api/v1/files/")
-                    .path(dbFile.getId())
-                    .toUriString();
-
-            return new ResponseFile(
-                    dbFile.getName(),
-                    fileDownloadUri,
-                    dbFile.getType(),
-                    dbFile.getData().length);
-        }).collect(Collectors.toList());
-
-        return ResponseEntity.status(HttpStatus.OK).body(retFiles);
+        return ResponseEntity.status(HttpStatus.OK).body(selectedFiles);
     }
 }

@@ -16,6 +16,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -49,7 +50,7 @@ public class ConfessionsApplication {
 	}
 
 	// Check every 5 minutes (300000 ms)
-	@Scheduled(fixedDelay = 300000)
+	@Scheduled(fixedDelay = 20000)
 	public void checkQueue() throws java.text.ParseException {
 
 		if (postQueue.isEmpty()) return;
@@ -97,9 +98,11 @@ public class ConfessionsApplication {
  	}
 
 	 // Get difference between 2 dates
-	private static long getDateDiff(Date date1, Date date2, TimeUnit timeUnit) {
-		long diffInMillies = date2.getTime() - date1.getTime();
-		return timeUnit.convert(diffInMillies,TimeUnit.MILLISECONDS);
+	private static long getDateDiff(Long date1, Long date2, TimeUnit timeUnit) {
+		long diffInMillies = date1 - date2;
+		long difMins = diffInMillies / 1000 / 60;
+		return difMins;
+
 	}
 
 	// Pop posts that exist in queue for a given duration
@@ -107,17 +110,17 @@ public class ConfessionsApplication {
 
 		while (!postQueue.isEmpty()) {
 
-			Date currentDate = new Date();
+			Long currentDate = System.currentTimeMillis();
 
 			JSONObject post = postQueue.peek();
-			// Parse exception here
+			// Parse exception
 			String dateInString = (String) post.get("datePosted");
 			SimpleDateFormat formatter = new SimpleDateFormat("EEE MMM dd hh:mm:ss z yyyy");
 			Date datePosted = formatter.parse(dateInString);
 
 			// Since the queue is ordered by date, when we found a post
 			// that exist no longer than the required duration, we can straight away stop the operation
-			if (getDateDiff(currentDate, datePosted, TimeUnit.MINUTES) < duration) {
+			if (getDateDiff(currentDate, datePosted.getTime(), TimeUnit.MINUTES) < duration) {
 				break;
 			}
 

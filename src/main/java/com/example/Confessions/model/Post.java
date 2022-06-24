@@ -3,6 +3,8 @@ package com.example.Confessions.model;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 import javax.persistence.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 @Entity
@@ -19,7 +21,7 @@ public class Post {
     private long replyId;
 
     @Column(name = "date_posted")
-    @JsonFormat(pattern="yyyy-MM-dd' 'HH:mm:ss")
+    @JsonFormat(pattern="YYYY-MM-DD' 'HH:mm:ss")
     private Date datePosted;
 
     @Column(name = "submit_id")

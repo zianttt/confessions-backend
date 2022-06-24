@@ -61,7 +61,7 @@ public class SpamCheck {
         boolean replyIdExists = false;
 
         for (Post curPost: existingPosts) {
-            if (findSimilarity(curPost.getContent(), (post.getContent())) >=0.75)
+            if (findSimilarity(curPost.getContent(), (post.getContent())) >=0.7)
                 flags++;
             if (post.getReplyId() == curPost.getId()) {
                 replyIdExists = true;
@@ -95,7 +95,7 @@ public class SpamCheck {
                     words[j] = "0";
                 }
             }
-            if(count > 1 && words[i] != "0")
+            if(count > 4)
                 return true;
         }
         return false;
@@ -121,7 +121,7 @@ public class SpamCheck {
     public boolean spamTrigger(String message){
 
         for(int i=0; i < triggers.length; i++){
-            if(message.contains(triggers[i]))
+            if(message.toLowerCase().contains(triggers[i].toLowerCase()))
                 return true;
         }
 
