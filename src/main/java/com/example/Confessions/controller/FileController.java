@@ -26,7 +26,6 @@ import javax.servlet.http.HttpServletRequest;
 @RestController
 @RequestMapping("/api/v1/")
 public class FileController {
-
     @Autowired
     private HttpServletRequest request;
 

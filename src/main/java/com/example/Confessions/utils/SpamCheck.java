@@ -48,14 +48,12 @@ public class SpamCheck {
         return numOfChecked > 0 && numOfChecked >= minLength &&
                 (double)numOfInvalid / (double)numOfChecked >= threshold ||
                 duplicate(newContent) ||
-                keySmash(newContent) ||
-                spamTrigger(newContent);
+                keySmash(newContent) || spamTrigger(newContent);
     }
 
     // Check for spam by comparing newContent to existing posts
     // return -1 for spam; 0 for id not exists; 1 for no spam detected
     public int comparativeSpamCheck(Post post, List<Post> existingPosts) {
-
         // Check if
         int flags = 0;
         boolean replyIdExists = false;
@@ -70,14 +68,12 @@ public class SpamCheck {
         if (flags > 3) {
             return -1;
         }
-
         // Reply id does not exist
         if(!replyIdExists && post.getReplyId() != -1) {
             MaliciousPostingError errorResponse = new MaliciousPostingError();
             errorResponse.setMessage("Reply Id not exist!");
             return 0;
         }
-
         return 1;
     }
 

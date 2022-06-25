@@ -101,6 +101,7 @@ public class ConfessionsApplication {
 	private static long getDateDiff(Long date1, Long date2, TimeUnit timeUnit) {
 		long diffInMillies = date1 - date2;
 		long difMins = diffInMillies / 1000 / 60;
+		System.out.println(difMins);
 		return difMins;
 
 	}

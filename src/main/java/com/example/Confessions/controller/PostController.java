@@ -60,7 +60,7 @@ public class PostController {
         }
 
         // Sentiment analyzer
-        if (analyzer.analyse(post.getContent()) <= 1) {
+        if (analyzer.analyse(post.getContent()) < 1) {
             MaliciousPostingError errorResponse = new MaliciousPostingError();
             errorResponse.setMessage("Your post has been rejected as it contains elements of vulgarity or depression!");
             return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
@@ -201,7 +201,6 @@ public class PostController {
         while (postStack.size() > 0) {
             boolean flag = false;
             Post cur = postStack.peek();
-
             for (Post temp: allPosts) {
                 // Search for a post that is replying to the current post and not added to the set
                 if (temp.getReplyId() == cur.getId() && !deletePosts.contains(temp)) {
@@ -212,7 +211,6 @@ public class PostController {
                     break;
                 }
             }
-
             // No post is replying to the current post
             if (!flag) {
                 // Add current post to the set
