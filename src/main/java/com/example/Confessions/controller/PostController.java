@@ -55,14 +55,14 @@ public class PostController {
         // Spam checking on post content
         if (spamCheck.contentIsSpam(post.getContent())) {
             MaliciousPostingError errorResponse = new MaliciousPostingError();
-            errorResponse.setMessage("Spamming Detected!");
+            errorResponse.setMessage("Your submission has been rejected as it has been detected as a spam!");
             return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
         }
 
         // Sentiment analyzer
         if (analyzer.analyse(post.getContent()) <= 1) {
             MaliciousPostingError errorResponse = new MaliciousPostingError();
-            errorResponse.setMessage("Negative post detected!");
+            errorResponse.setMessage("Your post has been rejected as it contains elements of vulgarity or depression!");
             return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
         }
 
@@ -73,11 +73,11 @@ public class PostController {
         switch (results) {
             case -1:
                 MaliciousPostingError errorResponse = new MaliciousPostingError();
-                errorResponse.setMessage("HEllo");
+                errorResponse.setMessage("Something went wrong!");
                 return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
             case 0:
                 MaliciousPostingError replyIdError = new MaliciousPostingError();
-                replyIdError.setMessage("Reply Id does not exist");
+                replyIdError.setMessage("Your post has been rejected as the reply Id does not exist!");
                 return new ResponseEntity<>(replyIdError, HttpStatus.NOT_FOUND);
         }
 
